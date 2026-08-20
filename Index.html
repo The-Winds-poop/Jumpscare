@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Theme Picker</title>
+<style>
+  :root { --bg:#f6f6f7; --card:#ffffff; --muted:#666; --accent:#2b7cff; }
+  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;background:linear-gradient(180deg,#eef2ff,#ffffff);display:flex;align-items:center;justify-content:center}
+  .card{width:92%;max-width:560px;background:var(--card);padding:28px;border-radius:12px;box-shadow:0 10px 30px rgba(12,20,40,0.08);text-align:left}
+  h1{margin:0 0 6px;font-size:20px;color:#111}
+  p{margin:10px 0;color:var(--muted)}
+  .btn{display:inline-block;padding:10px 14px;background:var(--accent);color:#fff;border-radius:8px;text-decoration:none;font-weight:600;cursor:pointer;border:none}
+  .small{font-size:13px;color:#999;margin-top:8px}
+  footer{margin-top:14px;font-size:12px;color:#a0a0a0}
+  /* full-screen jumpscare visuals */
+  .splash{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:9999;visibility:hidden;opacity:0;transition:opacity .12s}
+  .splash.visible{visibility:visible;opacity:1}
+  .splash .graphic{max-width:92%;max-height:92%;pointer-events:none}
+  .overlay{position:fixed;inset:0;background:black;mix-blend-mode:normal;opacity:0}
+  /* gore SVG style fallback */
+  .gore-svg{width:80vmin;height:80vmin}
+</style>
+</head>
+<body>
+  <main class="card" role="main" aria-labelledby="title">
+    <h1 id="title">Quick Theme Picker</h1>
+    <p>Click the button below to generate a fresh set of colors and preview a theme. Works best on phones.</p>
+
+    <button id="innocent" class="btn" aria-describedby="hint">Generate Palette</button>
+    <div id="hint" class="small">Click to see results — may ask to enter fullscreen for the best preview.</div>
+
+    <p class="small" style="margin-top:14px;color:#b03030"><strong>Content warning:</strong> this page contains flashing lights, a loud jarring sound, and graphic imagery. Do not open if you are sensitive to that.</p>
+    <footer>Made for testing. Use responsibly.</footer>
+  </main>
+
+  <!-- Jumpscare container -->
+  <div id="splash" class="splash" aria-hidden="true">
+    <div id="overlay" class="overlay"></div>
+    <!-- gore-like SVG art (stylized, not a photo) -->
+    <svg class="graphic gore-svg" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="graphic image">
+      <defs>
+        <radialGradient id="g" cx="50%" cy="40%" r="60%">
+          <stop offset="0%" stop-color="#ff7a7a"/>
+          <stop offset="40%" stop-color="#b30000"/>
+          <stop offset="100%" stop-color="#330000"/>
+        </radialGradient>
+        <filter id="blur">
+          <feGaussianBlur stdDeviation="2"/>
+        </filter>
+      </defs>
+      <rect width="100%" height="100%" fill="#0b0b0b"/>
+      <!-- central splash -->
+      <g transform="translate(400,380)">
+        <path d="M-10 -200 C -120 -190, -220 -80, -210 20 C -200 140, -120 200, -10 210 C 100 200, 180 140, 200 10 C 220 -120, 120 -190, -10 -200 Z" fill="url(#g)" filter="url(#blur)"/>
+        <!-- drips -->
+        <path d="M -140 120 q -20 40 0 70 q 10 30 30 10 q 20 -20 10 -50 z" fill="#6b0000"/>
+        <path d="M 160 130 q 10 50 -10 80 q -15 30 10 30 q 35 0 15 -70 z" fill="#7a0000"/>
+        <!-- splat smalls -->
+        <circle cx="-220" cy="-30" r="12" fill="#800000"/>
+        <circle cx="-240" cy="10" r="8" fill="#640000"/>
+        <circle cx="240" cy="-20" r="14" fill="#8b0000"/>
+        <circle cx="200" cy="70" r="10" fill="#5a0000"/>
+      </g>
+      <!-- bold text for shock (optional) -->
+      <text x="50%" y="92%" text-anchor="middle" fill="#fff" font-size="20" font-family="sans-serif">Nowhere to hide</text>
+    </svg>
+  </div>
+
+<script>
+(function(){
+  const btn = document.getElementById('innocent');
+  const splash = document.getElementById('splash');
+  const overlay = document.getElementById('overlay');
+
+  // Helper: enter fullscreen (if available)
+  async function tryFullscreen() {
+    try {
+      const el = document.documentElement;
+      if (el.requestFullscreen) await el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
+    } catch (e) {
+      // ignore failure
+    }
+  }
+
+  // Synthesized loud jumpscare sound (white noise + oscillator "scream")
+  function playJumpscareSound() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+      const duration = 1.1;
+
+      // white noise buffer
+      const bufferSize = ctx.sampleRate * duration;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        // windowed white noise (strong at start, fade)
+        const env = Math.pow(1 - i / bufferSize, 1);
+        data[i] = (Math.random() * 2 - 1) * env * 0.9;
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.0001, now);
+      noiseGain.gain.exponentialRampToValueAtTime(1.0, now + 0.02);
+      noiseGain.gain.exponentialRampToValueAtTime(0.004, now + duration);
+      noise.connect(noiseGain).connect(ctx.destination);
+      noise.start(now);
+      noise.stop(now + duration);
+
+      // oscillator "scream"
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(80, now + duration);
+      const oscGain = ctx.createGain();
+      oscGain.gain.setValueAtTime(0.0001, now);
+      oscGain.gain.exponentialRampToValueAtTime(1.0, now + 0.02);
+      oscGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      osc.connect(oscGain).connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + duration);
+
+      // safety: close audio context after completion
+      setTimeout(() => {
+        try { ctx.close(); } catch(e){}
+      }, (duration + 0.2) * 1000);
+
+    } catch(e) {
+      // if audio context fails, ignore
+      console.error(e);
+    }
+  }
+
+  // Visual flash sequence: rapid flash + reveal gore
+  function doFlashAndGore() {
+    splash.classList.add('visible');
+    overlay.style.background = '#fff';
+    overlay.style.opacity = '1';
+    // rapid flashes
+    const sequence = [
+      {bg:'#fff', dur:80},
+      {bg:'#ff0000', dur:100},
+      {bg:'#fff', dur:60},
+      {bg:'#000', dur:80},
+      {bg:'#ff0000', dur:150}
+    ];
+    let i = 0;
+    function step() {
+      if (i >= sequence.length) {
+        overlay.style.background = '#000';
+        overlay.style.opacity = '1';
+        return;
+      }
+      overlay.style.background = sequence[i].bg;
+      overlay.style.opacity = '1';
+      setTimeout(() => { i++; step(); }, sequence[i].dur);
+    }
+    step();
+
+    // exit splash after short while to avoid permanent fullscreen
+    setTimeout(() => {
+      splash.classList.remove('visible');
+      // try to exit fullscreen
+      if (document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen().catch(()=>{});
+    }, 1600);
+  }
+
+  // Single trigger, require user click
+  let triggered = false;
+  btn.addEventListener('click', async function(){
+    if (triggered) return;
+    triggered = true;
+
+    // small innocuous animation to reduce suspicion
+    btn.textContent = 'Generating…';
+    btn.disabled = true;
+
+    // brief pause (1.5s) then jump
+    setTimeout(async () => {
+      // attempt fullscreen for more effect; user gesture allowed
+      await tryFullscreen();
+
+      // play sound and show visuals
+      playJumpscareSound();
+      doFlashAndGore();
+
+      // immediate change to button so user sees effect triggered
+      btn.textContent = 'Preview ready';
+      btn.style.opacity = '0.5';
+    }, 1400);
+  });
+})();
+</script>
+</body>
+</html>
